@@ -1,15 +1,12 @@
 const body = document.body;
 const video = document.querySelector("#scroll-video");
-const videoSource = document.querySelector("#scroll-video-source");
 const progressBar = document.querySelector("#video-progress");
 const revealables = document.querySelectorAll("[data-reveal]");
 const counters = document.querySelectorAll("[data-count]");
-const mobileVideoQuery = window.matchMedia("(max-width: 767px)");
 
 let videoReady = false;
 let targetTime = 0;
 let currentTime = 0;
-let activeVideoSrc = "";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -23,35 +20,6 @@ const formatCounter = (value, target) => {
 
 const markVideoFallback = () => {
   body.classList.add("no-video");
-};
-
-const getPreferredVideoSrc = () => {
-  if (!video) {
-    return "";
-  }
-
-  return mobileVideoQuery.matches
-    ? video.dataset.mobileSrc || ""
-    : video.dataset.desktopSrc || "";
-};
-
-const applyResponsiveVideoSource = (force = false) => {
-  if (!video || !videoSource) {
-    return;
-  }
-
-  const nextSrc = getPreferredVideoSrc();
-
-  if (!nextSrc || (!force && nextSrc === activeVideoSrc)) {
-    return;
-  }
-
-  activeVideoSrc = nextSrc;
-  videoReady = false;
-  targetTime = 0;
-  currentTime = 0;
-  videoSource.src = nextSrc;
-  video.load();
 };
 
 const getScrollProgress = () => {
@@ -164,17 +132,12 @@ if (video) {
       markVideoFallback();
     }
   }, 2200);
-
-  applyResponsiveVideoSource(true);
 } else {
   markVideoFallback();
 }
 
 window.addEventListener("scroll", syncVideoProgress, { passive: true });
 window.addEventListener("resize", syncVideoProgress);
-mobileVideoQuery.addEventListener("change", () => {
-  applyResponsiveVideoSource();
-});
 
 syncVideoProgress();
 animateVideo();
