@@ -3,10 +3,23 @@ const video = document.querySelector("#scroll-video");
 const progressBar = document.querySelector("#video-progress");
 const revealables = document.querySelectorAll("[data-reveal]");
 const counters = document.querySelectorAll("[data-count]");
+const menuToggle = document.querySelector(".menu-toggle");
+const mobileNavPanel = document.querySelector("#mobile-nav-panel");
+const mobileNavLinks = document.querySelectorAll(".mobile-nav a");
+const mobileSectionToggles = document.querySelectorAll(".mobile-section-toggle");
+const mobileSectionContents = document.querySelectorAll(".mobile-section-content");
+const mobileCardToggles = document.querySelectorAll(".mobile-card-toggle");
+const mobileCardContents = document.querySelectorAll(".mobile-card-content");
+const zoomableImages = document.querySelectorAll("[data-lightbox]");
+const lightbox = document.querySelector("#image-lightbox");
+const lightboxImage = document.querySelector(".lightbox-image");
+const lightboxClose = document.querySelector(".lightbox-close");
+const lightboxCloseTargets = document.querySelectorAll("[data-lightbox-close]");
 
 let videoReady = false;
 let targetTime = 0;
 let currentTime = 0;
+const mobileMq = window.matchMedia("(max-width: 720px)");
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -20,6 +33,105 @@ const formatCounter = (value, target) => {
 
 const markVideoFallback = () => {
   body.classList.add("no-video");
+};
+
+const closeMobileMenu = () => {
+  if (!menuToggle || !mobileNavPanel) {
+    return;
+  }
+
+  menuToggle.setAttribute("aria-expanded", "false");
+  mobileNavPanel.hidden = true;
+  body.classList.remove("menu-open");
+};
+
+const toggleMobileMenu = () => {
+  if (!menuToggle || !mobileNavPanel) {
+    return;
+  }
+
+  const isOpen = menuToggle.getAttribute("aria-expanded") === "true";
+  menuToggle.setAttribute("aria-expanded", String(!isOpen));
+  mobileNavPanel.hidden = isOpen;
+  body.classList.toggle("menu-open", !isOpen);
+};
+
+const closeMobileSections = () => {
+  mobileSectionToggles.forEach((toggle) => {
+    toggle.setAttribute("aria-expanded", "false");
+  });
+
+  mobileSectionContents.forEach((content) => {
+    content.hidden = true;
+  });
+};
+
+const closeMobileCards = () => {
+  mobileCardToggles.forEach((toggle) => {
+    toggle.setAttribute("aria-expanded", "false");
+  });
+
+  mobileCardContents.forEach((content) => {
+    content.hidden = true;
+  });
+};
+
+const syncMobileDisclosureState = () => {
+  if (mobileMq.matches) {
+    closeMobileSections();
+    closeMobileCards();
+    return;
+  }
+
+  mobileSectionToggles.forEach((toggle) => {
+    toggle.setAttribute("aria-expanded", "true");
+  });
+
+  mobileSectionContents.forEach((content) => {
+    content.hidden = false;
+  });
+
+  mobileCardToggles.forEach((toggle) => {
+    toggle.setAttribute("aria-expanded", "true");
+  });
+
+  mobileCardContents.forEach((content) => {
+    content.hidden = false;
+  });
+};
+
+const revealWithin = (container) => {
+  if (!container) {
+    return;
+  }
+
+  container.querySelectorAll("[data-reveal]").forEach((node) => {
+    node.classList.add("is-visible");
+  });
+};
+
+const openLightbox = (image) => {
+  if (!lightbox || !lightboxImage || !image) {
+    return;
+  }
+
+  lightboxImage.src = image.currentSrc || image.src;
+  lightboxImage.alt = image.alt || "";
+  lightbox.hidden = false;
+  lightbox.setAttribute("aria-hidden", "false");
+  body.classList.add("lightbox-open");
+};
+
+const closeLightbox = () => {
+  if (!lightbox || !lightboxImage) {
+    return;
+  }
+
+  lightbox.hidden = true;
+  lightbox.setAttribute("aria-hidden", "true");
+  lightboxImage.src = "";
+  lightboxImage.alt = "";
+  body.classList.remove("lightbox-open");
 };
 
 const getScrollProgress = () => {
@@ -105,6 +217,79 @@ const counterObserver = new IntersectionObserver(
 
 revealables.forEach((node) => revealObserver.observe(node));
 counters.forEach((node) => counterObserver.observe(node));
+
+if (menuToggle && mobileNavPanel) {
+  menuToggle.addEventListener("click", toggleMobileMenu);
+
+  mobileNavLinks.forEach((link) => {
+    link.addEventListener("click", closeMobileMenu);
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 720) {
+      closeMobileMenu();
+    }
+  });
+}
+
+mobileSectionToggles.forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const controls = toggle.getAttribute("aria-controls");
+    const target = controls ? document.getElementById(controls) : null;
+
+    if (!target || !mobileMq.matches) {
+      return;
+    }
+
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!isOpen));
+    target.hidden = isOpen;
+
+    if (!isOpen) {
+      revealWithin(target);
+    }
+  });
+});
+
+mobileCardToggles.forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const controls = toggle.getAttribute("aria-controls");
+    const target = controls ? document.getElementById(controls) : null;
+
+    if (!target || !mobileMq.matches) {
+      return;
+    }
+
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!isOpen));
+    target.hidden = isOpen;
+
+    if (!isOpen) {
+      revealWithin(target);
+    }
+  });
+});
+
+mobileMq.addEventListener("change", syncMobileDisclosureState);
+syncMobileDisclosureState();
+
+zoomableImages.forEach((image) => {
+  image.addEventListener("click", () => openLightbox(image));
+});
+
+if (lightboxClose) {
+  lightboxClose.addEventListener("click", closeLightbox);
+}
+
+lightboxCloseTargets.forEach((node) => {
+  node.addEventListener("click", closeLightbox);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && lightbox && !lightbox.hidden) {
+    closeLightbox();
+  }
+});
 
 if (video) {
   video.addEventListener("loadedmetadata", () => {
